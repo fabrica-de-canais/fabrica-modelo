@@ -4,7 +4,7 @@ Motor gratuito para criar e manter canais "dark" (sem rosto) de Shorts no YouTub
 imagens, narração, animação e entrega no seu Telegram. Tudo roda na **sua** conta do GitHub, com as **suas**
 chaves gratuitas. Ninguém além de você vê suas chaves, seus canais ou seus vídeos.
 
-Use pela página: **https://fabrica-de-canais.github.io/** (botão *Começar*).
+Use pela página: **https://fabrica-de-canais.github.io/** (botão *Começar*). Passo a passo completo: [MANUAL.md](MANUAL.md).
 
 ## Como começar (uns 20 minutos, uma vez só)
 1. Clique em **Use this template → Create a new repository**. Deixe **Private**.
