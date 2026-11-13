@@ -10,6 +10,10 @@ import urllib.request
 
 MODELO_GEMINI = "gemini-flash-lite-latest"
 MODELO_GEMINI_RESERVA = "gemini-flash-latest"
+# Quando os dois acima estão sobrecarregados (erro 503), estes costumam responder.
+MODELOS_EXTRA = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
+# Se todos falharem, espera e tenta a rodada inteira de novo (picos de demanda passam em minutos).
+ESPERAS_RODADA = [60, 180]
 
 
 class ErroAPI(Exception):
@@ -48,6 +52,25 @@ def _requisitar(req, extrair, timeout: int = 90, tentativas: int = 4):
 
 
 def chamar_gemini(mensagens: list, sistema: str, max_tokens: int) -> str:
+    """Uma rodada por todos os modelos; se nenhum responder, espera e repete."""
+    for i, espera in enumerate([0, *ESPERAS_RODADA]):
+        if espera:
+            print(f"    Gemini sem resposta em todos os modelos; nova rodada em {espera} s", flush=True)
+            time.sleep(espera)
+        try:
+            return _uma_rodada(mensagens, sistema, max_tokens)
+        except ErroAPI as e:
+            if i == len(ESPERAS_RODADA) or not _passageiro(e):
+                raise
+    raise ErroAPI("Gemini não respondeu.")
+
+
+def _passageiro(e: Exception) -> bool:
+    t = str(e)
+    return any(k in t for k in ("não respondeu", "503", "500", "502", "504", "429", "vazia", "overloaded", "high demand"))
+
+
+def _uma_rodada(mensagens: list, sistema: str, max_tokens: int) -> str:
     """Nível gratuito do Gemini (chave do Google AI Studio, sem cartão).
 
     Pensamento no nível baixo: para escrever e conferir perguntas de quiz ele não ajuda,
@@ -57,7 +80,7 @@ def chamar_gemini(mensagens: list, sistema: str, max_tokens: int) -> str:
     chave = os.environ.get("GEMINI_API_KEY")
     if not chave:
         raise ErroAPI("Defina GEMINI_API_KEY no ambiente.")
-    modelos = [os.environ.get("GEMINI_MODEL", MODELO_GEMINI), MODELO_GEMINI_RESERVA]
+    modelos = [os.environ.get("GEMINI_MODEL", MODELO_GEMINI), MODELO_GEMINI_RESERVA, *MODELOS_EXTRA]
     conteudo = {
         "system_instruction": {"parts": [{"text": sistema}]},
         "contents": [{"role": "user" if m["role"] == "user" else "model",
