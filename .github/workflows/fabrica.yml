@@ -56,7 +56,13 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - uses: FedericoCarboni/setup-ffmpeg@v3
+      - name: ffmpeg
+        id: ffmpeg
+        continue-on-error: true
+        uses: FedericoCarboni/setup-ffmpeg@v3
+      - name: ffmpeg pelo apt (se o download acima falhar)
+        if: steps.ffmpeg.outcome != 'success'
+        run: command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
       - uses: actions/cache@v4
         with:
           path: ~/.u2net
