@@ -11,7 +11,7 @@ import urllib.request
 MODELO_GEMINI = "gemini-flash-lite-latest"
 MODELO_GEMINI_RESERVA = "gemini-flash-latest"
 # Quando os dois acima estão sobrecarregados (erro 503), estes costumam responder.
-MODELOS_EXTRA = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
+MODELOS_EXTRA = ["gemini-3.5-flash-lite", "gemini-3.8-flash"]
 # Se todos falharem, espera e tenta a rodada inteira de novo (picos de demanda passam em minutos).
 ESPERAS_RODADA = [60, 180]
 
@@ -91,7 +91,7 @@ def _uma_rodada(mensagens: list, sistema: str, max_tokens: int) -> str:
         partes = (dados.get("candidates") or [{}])[0].get("content", {}).get("parts", [])
         return "".join(p.get("text", "") for p in partes if not p.get("thought"))
 
-    ultimo = None
+    ultimo = passageiro = None
     for modelo in dict.fromkeys(modelos):
         for com_pensamento_baixo in (True, False):
             config = {"maxOutputTokens": max(max_tokens, 8192), "responseMimeType": "application/json"}
@@ -116,7 +116,10 @@ def _uma_rodada(mensagens: list, sistema: str, max_tokens: int) -> str:
                     continue
                 break
         print(f"    {modelo} falhou: {ultimo}", flush=True)
-    raise ultimo or ErroAPI("Gemini não respondeu.")
+        if ultimo and _passageiro(ultimo):
+            passageiro = ultimo
+    # Um modelo aposentado (404) no fim da lista não deve impedir nova rodada se outro só estava sobrecarregado.
+    raise passageiro or ultimo or ErroAPI("Gemini não respondeu.")
 
 
 def extrair_json(texto: str):
